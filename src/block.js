@@ -327,6 +327,11 @@ Block.prototype.finalize = function() {
     //this.commit_state()
 };
 
+Block.prototype.serialize_header_without_nonce = function() {
+    return rlp.encode(this.list_header(['nonce']));
+};
+
+
 Block.init_from_parent = function(opts) {
     var parent = opts.parent;
     var coinbase = opts.coinbase;
@@ -371,7 +376,7 @@ Block.deserialize_header = function(header_data) {
 function calc_difficulty(parent, timestamp) {
     var offset = parent.difficulty.divide(BLOCK_DIFF_FACTOR);
     var sign = (timestamp.intValue() - parent.timestamp.intValue() < 42) ?
-                        BigerInteger.ONE : BigerInteger.ONE.negate();
+                        BigInteger.ONE : BigInteger.ONE.negate();
     return parent.difficulty.add( offset.multiply(sign) );
 }
 
@@ -386,20 +391,22 @@ function calc_gaslimit(parent) {
     return gl.max(MIN_GAS_LIMIT);
 }
 
-function genesis(initial_alloc) {
+function genesis(initial_alloc, difficulty) {
     initial_alloc = initial_alloc || GENESIS_INITIAL_ALLOC;
+    difficulty = difficulty || INITIAL_DIFFICULTY;
     // https://ethereum.etherpad.mozilla.org/12
     var block = new Block({
         prevhash: GENESIS_PREVHASH,
         coinbase: GENESIS_COINBASE,
         tx_list_root: trie.BLANK_ROOT,
-        difficulty: INITIAL_DIFFICULTY,
+        difficulty: difficulty,
         nonce: GENESIS_NONCE,
         gas_limit: GENESIS_GAS_LIMIT
     });
     for (var addr in initial_alloc) {
         block.set_balance(addr, initial_alloc[addr]);
     }
+    // TODO block.state.db.commit()
     return block;
 }
 
